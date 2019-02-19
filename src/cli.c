@@ -182,11 +182,23 @@ static void parse_command(char *cmd)
 	char *ptr;
 	char buf[128];
 	node_t *help_node;
+	int i;
 
 	if (!strcmp(cmd, "quit")) {
 		is_run = 0;
 		return;
 	}
+	if (!strcmp(cmd, "..")) {
+		help_node = node_get_parent(cur_node);
+		if (!help_node)
+			return;
+		cur_node = help_node;
+		for (i = strlen(cli_prompt) - 1; cli_prompt[i] != '/'; i--)
+			cli_prompt[i] = 0;
+		cli_prompt[i] = 0;
+		strcat(cli_prompt, ">");
+	}
+
 	ptr = strtok(cmd, " ");
 	if (!ptr)
 		return;
