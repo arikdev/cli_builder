@@ -259,6 +259,19 @@ static char *get_last_word(char *buf)
 	return buf + i;
 }
 
+static void show_help(node_t *node, char *buf)
+{
+	rule_operations_t *rule_operation = (rule_operations_t *)node_get_data(node);
+	if (!rule_operation)
+		return;
+	if (!rule_operation->help_cb)
+		return;
+	printf("\n\r");
+	rule_operation->help_cb();
+	printf("\n\r");
+	printf("%s%s", cli_prompt, buf);
+}
+
 void show_options(char *buf, int *ind, int *pos) 
 {
 	node_t *node_p, *node_p1;
@@ -272,7 +285,10 @@ void show_options(char *buf, int *ind, int *pos)
 	printf("\rXXXXX b4 buf:%s: \n", buf);
 #endif
 
-	if (!node_get_son(cur_node)) return;
+	if (!node_get_son(cur_node)) {
+		show_help(cur_node, buf);
+		return;
+	}
 
 	// Run for all the words in the buffer. For each word get form DB
 	// If not in DB - return.
@@ -319,17 +335,8 @@ void show_options(char *buf, int *ind, int *pos)
 	}
 
 	if (!ri) {
-		if (!node_get_son(node_p)) {
-			// leaf
-			rule_operations_t *rule_operation = (rule_operations_t *)node_get_data(node_p);
-			if (rule_operation) { 
-				if (rule_operation->help_cb)
-					printf("\n\r");
-					rule_operation->help_cb();
-				printf("\n\r");
-				printf("%s%s", cli_prompt, buf);
-			}
-		}
+		if (!node_get_son(node_p))
+			show_help(node_p, buf);
 		goto out;
 	}
 
@@ -561,7 +568,7 @@ void cli_run(void)
 		if (strlen(cmd))
 			cmd_insert(cmds, cmd);
 		parse_command(cmd);
-		if (strlen(cmd))
+		if (strlen(cmd) && strcmp(cmd, "quit"))
 			printf("\n");
 	}
 	printf("\n\033[%dD", (int)strlen(cli_prompt));
