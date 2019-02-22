@@ -279,11 +279,11 @@ node_t **set_node_path_str(node_t **node, char *path, char *value)
 	return node;
 }
 
-int node_path_set_data(node_t *node, char *path, void *data)
+int node_path_set_data(node_t **node, char *path, void *data)
 {
 	node_t **hnode;
 
-	if (!(hnode = node_get(&node, path)))
+	if (!(hnode = node_get(node, path)))
 		return -1;
 
 	(*hnode)->data = data;

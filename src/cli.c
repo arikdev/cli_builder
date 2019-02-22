@@ -47,6 +47,10 @@
 	if (!ptr) \
 		return CLI_ERROR;
 
+typedef struct {
+	void (*help_cb)(void);
+} rule_operations_t;
+
 static int is_run = 1;
 
 static node_t *cli_node;
@@ -314,7 +318,20 @@ void show_options(char *buf, int *ind, int *pos)
 		}
 	}
 
-	if (!ri) goto out;
+	if (!ri) {
+		if (!node_get_son(node_p)) {
+			// leaf
+			rule_operations_t *rule_operation = (rule_operations_t *)node_get_data(node_p);
+			if (rule_operation) { 
+				if (rule_operation->help_cb)
+					printf("\n\r");
+					rule_operation->help_cb();
+				printf("\n\r");
+				printf("%s%s", cli_prompt, buf);
+			}
+		}
+		goto out;
+	}
 
 	if (ri == 1) {
 		if (is_finish_blank) {
@@ -514,13 +531,9 @@ void test_node(void)
 	}
 }
 
-typedef struct {
-	void (*help_cb)(void);
-} rule_operations_t;
-
-static void ip_help(void)
+static void can_help(void)
 {
-	printf("rule=\n");
+	printf("[rule=X] [tuple=X]");
 }
 
 void cli_run(void)
@@ -529,14 +542,14 @@ void cli_run(void)
 
 	node_t *nodep;
 
-	rule_operations_t ip_operations;
-	ip_operations.help_cb = ip_help;
+	rule_operations_t can_operations;
+	can_operations.help_cb = can_help;
 
 	// init
 
 	cur_node = cli_node = read_node("(cli(show (rule (can)(ip)(file)) (wl (can)(ip)(file))) (update (rule (can)(ip)(file)) (wl (can)(ip)(file))))");
 
-	//node_path_set_data(&cli_node, "show/rule/ip", ip_operations);
+	node_path_set_data(&cli_node, "show/rule/can", &can_operations);
 
 	//test_node();
 	
