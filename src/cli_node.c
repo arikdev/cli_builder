@@ -140,7 +140,7 @@ static node_t **node_get_or_set(int is_get, node_t **node, char *path)
 {
 	node_t **ret_node = NULL, *parent;
 	char *tmp = NULL, *token;  
-  
+
 	if (!node)
 		return NULL;
 	if (!*node) {
@@ -209,6 +209,14 @@ char *node_get_value(node_t *node)
 	return node->value;
 }
 
+void *node_get_data(node_t *node)
+{
+	if (!node)
+		return NULL;
+  
+	return node->data;
+}
+
 #define RET_VAL(is_null, val) (is_null || val ? val : strdup(""))
 
 static char *_node_get_path_str(int is_null, node_t **node, char *path)
@@ -226,7 +234,9 @@ char *node_get_path_str(node_t **node, char *path)
 
 node_t *node_get_path(node_t **node, char *path)
 {
-	node_t **nodep = node_get(node, path);
+	node_t **nodep;
+
+	nodep = node_get(node, path);
 	if (!nodep) return NULL;
 	return *nodep;
 }
@@ -269,6 +279,17 @@ node_t **set_node_path_str(node_t **node, char *path, char *value)
 	return node;
 }
 
+int node_path_set_data(node_t *node, char *path, void *data)
+{
+	node_t **hnode;
+
+	if (!(hnode = node_get(&node, path)))
+		return -1;
+
+	(*hnode)->data = data;
+
+	return 0;
+}
 
 node_t **node_lookfor_value(node_t **node, char *path, char *value)
 {

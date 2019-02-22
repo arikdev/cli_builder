@@ -9,7 +9,7 @@ BUILD_INCLUDES = $(INCLUDES:$(INCLUDE_DIR)%=$(BUILD_DIR)%)
 OBJS = $(BUILD_SRCS:%.c=%.o)
 CPPFLAGS += -I$(BUILD_DIR)
 TARGET = $(BUILD_DIR)/test
-CFLAGS += $(if $(DEBUG),-g -O0)
+CFLAGS += $(if $(DEBUG),-g -O0 -DDEBUG)
 LIB = $(BUILD_DIR)/libcli.a
 LDFLAGS = -L$(BUILD_DIR) -lcli
 
