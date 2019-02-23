@@ -49,6 +49,7 @@
 
 typedef struct {
 	void (*help_cb)(void);
+	void (*run_cb)(char *buf);
 } rule_operations_t;
 
 static int is_run = 1;
@@ -368,6 +369,35 @@ out:
 #endif
 }
 
+void handle_enter(char *buf)
+{
+	rule_operations_t *rule_operation;
+	node_t *nodep, *nodep1;
+	char *tmp = NULL, *p, *val;
+
+	// run for all the words so far the word is in DB
+
+	tmp = strdup(buf);
+
+	nodep = cur_node;
+	for (p = strtok(tmp, " "); p; p = strtok(NULL, " ")) {
+		for (nodep1 = node_get_son(nodep); nodep1 && strcmp(node_get_value(nodep1), p); nodep1 = node_get_next(nodep1));
+		if (!nodep1)
+			break;
+		nodep = nodep1;
+	}
+	rule_operation = (rule_operations_t *)node_get_data(nodep);
+	if (!rule_operation)
+		goto out;
+	if (!rule_operation->run_cb)
+		goto out;
+	rule_operation->run_cb(buf);
+
+out:
+	if (tmp)
+		free(tmp);
+}
+
 static void get_cmd(char *buf, unsigned int size, char *prompt)
 {
 	char c;
@@ -460,6 +490,7 @@ static void get_cmd(char *buf, unsigned int size, char *prompt)
 					printf("\n");
 					printf("\033[%dD", (int)strlen(prompt));
 				}
+				handle_enter(buf);
 				goto out;
 			case 0x3: // Cntrl C
 				term_reset(count);
@@ -543,6 +574,11 @@ static void can_help(void)
 	printf("[rule=X] [tuple=X]");
 }
 
+static void can_run(char *buf)
+{
+	printf("\r\n>>>.XXX can run buf:%s:\n", buf);
+}
+
 void cli_run(void)
 {
 	char cmd[MAX_BUF_SIZE];
@@ -551,14 +587,11 @@ void cli_run(void)
 
 	rule_operations_t can_operations;
 	can_operations.help_cb = can_help;
-
-	// init
+	can_operations.run_cb = can_run;
 
 	cur_node = cli_node = read_node("(cli(show (rule (can)(ip)(file)) (wl (can)(ip)(file))) (update (rule (can)(ip)(file)) (wl (can)(ip)(file))))");
 
 	node_path_set_data(&cli_node, "show/rule/can", &can_operations);
-
-	//test_node();
 	
 	strcpy(cli_prompt, node_get_value(cur_node));
 	strcat(cli_prompt, ">");
