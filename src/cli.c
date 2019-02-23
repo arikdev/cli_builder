@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <ctype.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <unistd.h>
@@ -46,11 +47,6 @@
 	ptr = strtok(NULL, del); \
 	if (!ptr) \
 		return CLI_ERROR;
-
-typedef struct {
-	void (*help_cb)(void);
-	void (*run_cb)(char *buf);
-} rule_operations_t;
 
 static int is_run = 1;
 
@@ -185,7 +181,6 @@ static char *get_string_user_input(int is_current, char *def_val, char *prompt, 
 static void parse_command(char *cmd)
 {
 	char *tmp = NULL, *word;
-	char buf[128];
 	char *words[100];
 	node_t *help_node;
 	int i, count = 0;
@@ -193,16 +188,6 @@ static void parse_command(char *cmd)
 	if (!strcmp(cmd, "quit")) {
 		is_run = 0;
 		return;
-	}
-	if (!strcmp(cmd, "..")) {
-		help_node = node_get_parent(cur_node);
-		if (!help_node)
-			return;
-		cur_node = help_node;
-		for (i = strlen(cli_prompt) - 1; cli_prompt[i] != '/'; i--)
-			cli_prompt[i] = 0;
-		cli_prompt[i] = 0;
-		strcat(cli_prompt, ">");
 	}
 
 	tmp = strdup(cmd);
@@ -218,17 +203,6 @@ static void parse_command(char *cmd)
 		print_usage();
 		goto out;
 	}
-
-	if (count == 1) {
-		// move to next level
-		cur_node = help_node;
-		cli_prompt[strlen(cli_prompt) - 1] = '/';
-		cli_prompt[strlen(cli_prompt)] = 0;
-		strcat(cli_prompt, words[0]);
-		strcat(cli_prompt, ">");
-	}
-
-	print_usage();
 
 out:
 	if (tmp)
@@ -250,19 +224,9 @@ static void term_reset(int count)
 	}
 }
 
-static char *get_last_word(char *buf)
-{
-	int i, n = strlen(buf);
-
-	for (i = n - 1; i >= 0 && buf[i] == ' '; i--);
-	for (; i >= 0 && buf[i] != ' '; i--);
-
-	return buf + i;
-}
-
 static void show_help(node_t *node, char *buf)
 {
-	rule_operations_t *rule_operation = (rule_operations_t *)node_get_data(node);
+	node_operations_t *rule_operation = (node_operations_t *)node_get_data(node);
 	if (!rule_operation)
 		return;
 	if (!rule_operation->help_cb)
@@ -277,7 +241,6 @@ void show_options(char *buf, int *ind, int *pos)
 {
 	node_t *node_p, *node_p1;
 	int count = 0, i, is_finish_blank, ri;
-	char *retval = NULL;
 	char *words[100], *results[100];
 	char *tmp = NULL, *word;
 	char arikb[1000], outbuf[1000];
@@ -316,7 +279,7 @@ void show_options(char *buf, int *ind, int *pos)
 	// If not try to complete
 	if (!count)
 		outbuf[0] = 0;
-	else if (node_p1 = node_get_path(&node_p, words[count - 1])) {
+	else if ((node_p1 = node_get_path(&node_p, words[count - 1]))) {
 		node_p = node_p1;
 		if (!is_finish_blank) {
 			count = 0;
@@ -371,22 +334,43 @@ out:
 
 void handle_enter(char *buf)
 {
-	rule_operations_t *rule_operation;
+	node_operations_t *rule_operation;
 	node_t *nodep, *nodep1;
-	char *tmp = NULL, *p, *val;
+	char *tmp = NULL, *p, *words[100];
+	int count = 0, i;
 
-	// run for all the words so far the word is in DB
+	if (!memcmp(buf, "..", 2)) {
+                nodep = node_get_parent(cur_node);
+                if (!nodep)
+                        return;
+                cur_node = nodep;
+                for (i = strlen(cli_prompt) - 1; cli_prompt[i] != '/'; i--)
+                        cli_prompt[i] = 0;
+                cli_prompt[i] = 0;
+                strcat(cli_prompt, ">");
+        }
 
 	tmp = strdup(buf);
-
 	nodep = cur_node;
 	for (p = strtok(tmp, " "); p; p = strtok(NULL, " ")) {
 		for (nodep1 = node_get_son(nodep); nodep1 && strcmp(node_get_value(nodep1), p); nodep1 = node_get_next(nodep1));
 		if (!nodep1)
 			break;
 		nodep = nodep1;
+		words[count++] = p;
 	}
-	rule_operation = (rule_operations_t *)node_get_data(nodep);
+	
+	if (count == 1) {
+                // move to next level
+                cur_node = nodep;
+                cli_prompt[strlen(cli_prompt) - 1] = '/';
+                cli_prompt[strlen(cli_prompt)] = 0;
+                strcat(cli_prompt, words[0]);
+                strcat(cli_prompt, ">");
+		goto out;
+        }
+
+	rule_operation = (node_operations_t *)node_get_data(nodep);
 	if (!rule_operation)
 		goto out;
 	if (!rule_operation->run_cb)
@@ -529,70 +513,25 @@ out:
 
 int cli_register(char *path, void (*cb)(char *data))
 {
+	return 0;
 }
 
-void test_node(void)
+int cli_init(char *buf)
 {
-	node_t *nodep, *node_p1;
+	cur_node = cli_node = read_node(buf);
 
-	print_node(cli_node);
-
-	nodep = node_get_path(&cli_node, "show/rule");
-	if (nodep)
-		printf("node value:%s \n", node_get_value(nodep));
-	else
-		printf("no node !!!\n");
-
-	printf("Test go back:\n");
-	node_p1 = node_get_parent(nodep);
-	if (node_p1)
-		printf("parent :%s \n", node_get_value(node_p1));
-	else
-		printf("NO parent \n");
-
-	node_p1 = node_get_parent(node_p1);
-	if (node_p1)
-		printf("parent :%s \n", node_get_value(node_p1));
-	else
-		printf("NO parent \n");
-	node_p1 = node_get_parent(node_p1);
-	if (node_p1)
-		printf("parent :%s \n", node_get_value(node_p1));
-	else
-		printf("NO parent \n");
-
-	printf("Test dril down");
-
-	printf("Fet all sons:\n");
-	for (node_p1 = node_get_son(nodep); node_p1; node_p1 = node_get_next(node_p1)) {
-		printf("%s\n", node_get_value(node_p1));
-	}
+	return 0;
 }
 
-static void can_help(void)
+int cli_register_operatios(char *path, node_operations_t *operation)
 {
-	printf("[rule=X] [tuple=X]");
-}
-
-static void can_run(char *buf)
-{
-	printf("\r\n>>>.XXX can run buf:%s:\n", buf);
+	return node_path_set_data(&cli_node, path, operation);
 }
 
 void cli_run(void)
 {
 	char cmd[MAX_BUF_SIZE];
 
-	node_t *nodep;
-
-	rule_operations_t can_operations;
-	can_operations.help_cb = can_help;
-	can_operations.run_cb = can_run;
-
-	cur_node = cli_node = read_node("(cli(show (rule (can)(ip)(file)) (wl (can)(ip)(file))) (update (rule (can)(ip)(file)) (wl (can)(ip)(file))))");
-
-	node_path_set_data(&cli_node, "show/rule/can", &can_operations);
-	
 	strcpy(cli_prompt, node_get_value(cur_node));
 	strcat(cli_prompt, ">");
 	while (is_run) {

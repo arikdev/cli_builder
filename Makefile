@@ -10,6 +10,7 @@ OBJS = $(BUILD_SRCS:%.c=%.o)
 CPPFLAGS += -I$(BUILD_DIR)
 TARGET = $(BUILD_DIR)/test
 CFLAGS += $(if $(DEBUG),-g -O0 -DDEBUG)
+CFLAGS += -Wall
 LIB = $(BUILD_DIR)/libcli.a
 LDFLAGS = -L$(BUILD_DIR) -lcli
 
