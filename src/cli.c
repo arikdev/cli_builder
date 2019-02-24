@@ -125,25 +125,6 @@ static void print_usage(void)
 {
 }
 
-static void get_num_param(int *rule_id, int *tuple_id)
-{
-	char *ptr, *iter;
-
-	ptr = strtok(NULL, " "); 
-	if (!ptr)
-		return;
-
-	for (iter = ptr; *iter && *iter != '='; iter++);
-	if (!iter) 
-		return;
-	iter++;
-	
-	if (!memcmp(ptr, "rule", strlen("rule")))
-		*rule_id = atoi(iter);
-	else if (!memcmp(ptr, "tuple", strlen("tuple")))
-		*tuple_id = atoi(iter);
-}
-
 static char *get_string_user_input(int is_current, char *def_val, char *prompt, int (*is_valid_cb)(char *data), void (*help_cb)(void))
 {
 	char buf[512];
@@ -184,7 +165,7 @@ static void parse_command(char *cmd)
 	char *tmp = NULL, *word;
 	char *words[100];
 	node_t *help_node;
-	int i, count = 0;
+	int count = 0;
 
 	if (!strcmp(cmd, "quit")) {
 		is_run = 0;
@@ -361,7 +342,7 @@ void handle_enter(char *buf)
 		words[count++] = p;
 	}
 	
-	if (nodep1 && count == 1) {
+	if (nodep1 && node_get_son(nodep1) &&  count == 1) {
                 // move to next level
                 cur_node = nodep;
                 cli_prompt[strlen(cli_prompt) - 1] = '/';
