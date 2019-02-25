@@ -35,7 +35,6 @@ THE SOFTWARE.
 #include <cli.h>
 #include <cli_node.h>
 
-#define NUM_OF_RULES 4096
 #define MAX_BUF_SIZE 10000
 #define NUM_OF_CMD_ENTRIES 100
 
@@ -322,15 +321,16 @@ void handle_enter(char *buf)
 	int count = 0, i;
 
 	if (!memcmp(buf, "..", 2)) {
-                nodep = node_get_parent(cur_node);
-                if (!nodep)
-                        return;
-                cur_node = nodep;
-                for (i = strlen(cli_prompt) - 1; cli_prompt[i] != '/'; i--)
-                        cli_prompt[i] = 0;
-                cli_prompt[i] = 0;
-                strcat(cli_prompt, ">");
-        }
+		nodep = node_get_parent(cur_node);
+		if (!nodep)
+			return;
+		cur_node = nodep;
+		for (i = strlen(cli_prompt) - 1; cli_prompt[i] != '/'; i--)
+			cli_prompt[i] = 0;
+		cli_prompt[i] = 0;
+		strcat(cli_prompt, ">");
+		goto out;
+	}
 
 	tmp = strdup(buf);
 	nodep = cur_node;
@@ -518,7 +518,8 @@ void cli_run(void)
 	strcpy(cli_prompt, node_get_value(cur_node));
 	strcat(cli_prompt, ">");
 	while (is_run) {
-		printf("%s", cli_prompt);
+		printf("\r%s", cli_prompt);
+		printf(CLEAR_RIGHT);
 		get_cmd(cmd, MAX_BUF_SIZE, cli_prompt);
 		if (strlen(cmd))
 			cmd_insert(cmds, cmd);
