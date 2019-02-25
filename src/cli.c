@@ -160,17 +160,17 @@ static char *get_string_user_input(int is_current, char *def_val, char *prompt, 
 	return NULL;
 }
 
+void cli_set_run(int i_is_run)
+{
+	is_run = i_is_run;
+}
+
 static void parse_command(char *cmd)
 {
 	char *tmp = NULL, *word;
 	char *words[100];
 	node_t *help_node;
 	int count = 0;
-
-	if (!strcmp(cmd, "quit")) {
-		is_run = 0;
-		return;
-	}
 
 	tmp = strdup(cmd);
 	for (word = strtok(tmp, " "); word; word = strtok(NULL, " ")) {
@@ -523,7 +523,7 @@ void cli_run(void)
 		if (strlen(cmd))
 			cmd_insert(cmds, cmd);
 		parse_command(cmd);
-		if (strlen(cmd) && strcmp(cmd, "quit"))
+		if (strlen(cmd) && !is_run)
 			printf("\n");
 	}
 	printf("\n\033[%dD", (int)strlen(cli_prompt));
