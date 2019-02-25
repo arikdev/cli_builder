@@ -456,6 +456,7 @@ static void get_cmd(char *buf, unsigned int size, char *prompt)
 					printf("\n");
 					printf("\033[%dD", (int)strlen(prompt));
 				}
+				term_reset(count);
 				handle_enter(buf);
 				goto out;
 			case 0x3: // Cntrl C
